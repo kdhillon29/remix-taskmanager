@@ -1,19 +1,17 @@
 import { Authenticator, AuthorizationError } from "remix-auth";
 import { sessionStorage } from "./session.server";
 import { FormStrategy } from "remix-auth-form";
-import { prisma } from "./prisma.server";
+import { prisma, User } from "./prisma.server";
 import bcrypt from "bcryptjs";
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET must be set");
 }
-type UserType = {
-  id: string;
-  name: string;
-  email: string;
-};
-const authenticator = new Authenticator<UserType>(sessionStorage);
+// Define the UserType to be used in the authenticator.
+// type UserType = Pick<User, "id" | "email" | "name">;
+// Create an authenticator with session storage and form strategy.
+const authenticator = new Authenticator<User>(sessionStorage);
 
 const formStrategy = new FormStrategy(async ({ form }) => {
   const email = form.get("email") as string;
@@ -25,7 +23,7 @@ const formStrategy = new FormStrategy(async ({ form }) => {
 
   if (!user) {
     console.log("you entered a wrong email");
-    throw new AuthorizationError();
+    throw new AuthorizationError("Invalid email or password");
   }
 
   const passwordsMatch = await bcrypt.compare(
@@ -34,12 +32,15 @@ const formStrategy = new FormStrategy(async ({ form }) => {
   );
 
   if (!passwordsMatch) {
-    throw new AuthorizationError();
+    console.log("password does not match");
+
+    throw new AuthorizationError("Invalid email or password");
   }
 
   return user;
 });
 
-authenticator.use(formStrategy, "form");
+// authenticator.use(formStrategy, "form");
+authenticator.use(formStrategy, "user-pass");
 
 export { authenticator };
