@@ -13,6 +13,7 @@ import { createUser } from "../utils/user.server";
 import { InputField } from "../components/InputField";
 import { registerSchema } from "../utils/validationschema";
 import { AuthorizationError } from "remix-auth";
+import { ZodIssue } from "zod";
 
 export const meta: MetaFunction = () => {
   return [
@@ -111,7 +112,7 @@ export default function Signup() {
       <form method="POST" className="rounded-2xl bg-white p-6 w-96">
         <h2 className="text-3xl font-extrabold text-black-600 mb-5">
           {formData.error.length > 0 && typeof formData.error !== "string" ? (
-            formData.error?.map((er, i) => (
+            formData.error?.map((er: ZodIssue, i: number) => (
               <p key={i} className="text-sm text-red-600">
                 - {er.message}
               </p>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { ActionFunction, LoaderFunction } from "@remix-run/node";
-import { useActionData, Link } from "@remix-run/react";
+import { useActionData, Link, useNavigation } from "@remix-run/react";
 
 import { authenticator } from "../utils/auth.server";
 
@@ -33,13 +33,17 @@ export const action: ActionFunction = async ({
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+
+  console.log(navigation.state);
+
   const [formData, setFormData] = useState({
     email: actionData?.fields?.email || "",
     password: actionData?.fields?.password || "",
   });
   const [error, setError] = useState<ZodIssue[]>();
   const [isValid, setIsValid] = useState(false);
-  const [value] = useDebounce(formData, 2000);
+  const [value] = useDebounce(formData, 3000);
 
   const validate = (
     event?: React.ChangeEvent<HTMLInputElement>,
@@ -66,13 +70,7 @@ export default function Login() {
     event: React.ChangeEvent<HTMLInputElement>,
     field: string
   ) => {
-    // console.log("in handleInputChange", event.target.value, field);
-
-    // const isValid = validate();
-
     setFormData((form) => ({ ...form, [field]: event.target.value }));
-
-    //  const { email, password } = value;
 
     console.log(formData);
   };
@@ -108,13 +106,15 @@ export default function Login() {
           <button
             type="submit"
             name="_action"
-            disabled={!isValid}
+            disabled={!isValid || navigation.state === "submitting"}
             value="Sign In"
             className={`w-full rounded-xl mt-2 ${
-              isValid ? "bg-red-600" : "bg-red-200"
-            } px-3 py-2 text-white font-semibold transition duration-300 ease-in-out hover:bg-red-600`}
+              isValid
+                ? "bg-red-600 cursor-pointer hover:bg-red-600"
+                : "bg-red-200 cursor-not-allowed"
+            } px-3 py-2 text-white font-semibold transition duration-300 ease-in-out `}
           >
-            Login
+            {navigation.state === "submitting" ? "Logging In.." : "Login"}
           </button>
         </div>
       </form>
