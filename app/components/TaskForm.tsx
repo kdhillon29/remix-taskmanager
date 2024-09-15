@@ -12,8 +12,8 @@ type taskProps = {
 export function TaskForm({ id, message }: taskProps) {
   // const [isSubmit, setIsSubmit] = useState(false);
   const [task, setTask] = useState({ id, message });
-  console.log(id, message);
-  console.log(task);
+  // console.log(id, message);
+  // console.log(task);
 
   useEffect(() => {
     setTask({ id, message });

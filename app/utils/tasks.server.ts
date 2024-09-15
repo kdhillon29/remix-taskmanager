@@ -3,6 +3,7 @@ import { json } from "@remix-run/node";
 import { TaskData } from "./types";
 // import { TaskForm } from "~/components/TaskForm";
 // import { User } from "@prisma/client";
+type CompletedTask = { taskId: string; isCompleted: boolean };
 
 export const getMyTasks = async (userID: string) => {
   if (userID) {
@@ -41,7 +42,27 @@ export const createTask = async ({ category, message, userId }: TaskData) => {
     { status: 201 }
   );
 };
-export const updateTask = async ({ category, message, taskId }: TaskData) => {
+export const isCompletedTask = async ({
+  taskId,
+  isCompleted,
+}: CompletedTask) => {
+  const isCompletedTask = await prisma.task.update({
+    where: {
+      id: taskId,
+    },
+    data: {
+      isCompleted,
+    },
+  });
+  return isCompletedTask;
+};
+
+export const updateTask = async ({
+  category,
+  message,
+
+  taskId,
+}: TaskData) => {
   console.log(taskId);
 
   const updateTask = await prisma.task.update({

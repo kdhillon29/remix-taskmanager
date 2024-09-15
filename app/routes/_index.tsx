@@ -16,6 +16,7 @@ import {
   createTask,
   getMyTasks,
   deleteTask,
+  isCompletedTask,
   // getTask,
 } from "../utils/tasks.server";
 import { TaskForm } from "../components/TaskForm";
@@ -39,21 +40,21 @@ export const loader: LoaderFunction = async ({ request }) => {
     failureRedirect: "/login",
   });
   const userTask = await getMyTasks(user.id);
-  console.log(userTask);
+  // console.log(userTask);
 
   return { user, userTask };
 };
 export const action: ActionFunction = async ({ request }) => {
-  const form = await request.formData();
-  const action = form.get("action");
+  const formData = await request.formData();
+  const action = formData.get("action");
 
   switch (action) {
     case "logout": {
       return await authenticator.logout(request, { redirectTo: "/login" });
     }
     case "new": {
-      const Category = form.get("category") as Category;
-      const Message = form.get("message") as string;
+      const Category = formData.get("category") as Category;
+      const Message = formData.get("message") as string;
       const user = await authenticator.isAuthenticated(request);
       const userId = user?.id;
       const newTask = await createTask({
@@ -63,11 +64,33 @@ export const action: ActionFunction = async ({ request }) => {
       });
       return newTask;
     }
+    case "done": {
+      console.log("in completed case");
+      console.log(formData);
+      const id = formData.get("id") as string;
+      const completed = formData.get("completed") as unknown;
+      console.log(completed);
+
+      const isCompleted = completed == "on" ? true : false;
+      // const user = await authenticator.isAuthenticated(request);
+      // const userId = user?.id;
+      console.log(id, isCompleted);
+      const isDone = await isCompletedTask({
+        isCompleted,
+        taskId: id,
+      });
+      return isDone;
+
+      return null;
+    }
     case "edit": {
-      const id = form.get("id") as string;
+      console.log("in edit case");
+
+      const id = formData.get("id") as string;
+
       // const id = await getTask(id);
-      const Category = form.get("category") as Category;
-      const Message = form.get("message") as string;
+      const Category = formData.get("category") as Category;
+      const Message = formData.get("message") as string;
       const user = await authenticator.isAuthenticated(request);
       const userId = user?.id;
       const editTask = await updateTask({
@@ -77,12 +100,12 @@ export const action: ActionFunction = async ({ request }) => {
         userId,
       });
       return editTask;
-      console.log(editTask);
+      // console.log(editTask);
 
       return editTask;
     }
     case "delete": {
-      const id = form.get("id") as string;
+      const id = formData.get("id") as string;
       const deletedTask = await deleteTask(id);
       return deletedTask;
     }
@@ -104,7 +127,7 @@ export default function Index() {
 
   return (
     <div className="h-full bg-blue-300 pt-10">
-      <div className="max-w-md mx-auto items-left flex flex-col bg-white p-6">
+      <div className="max-w-lg mx-auto items-left flex flex-col bg-white p-6">
         <div className="d-flex flex-row mb-10">
           <h2 className="text-sm font-normal text-gray-500">
             Welcome {user.name}!
@@ -125,7 +148,7 @@ export default function Index() {
             ) : null}
           </div>
         </div>
-        {/* {!editTask && <TaskForm />} */}
+        {/* {!editTask && <TaskformData />} */}
         <TaskForm {...editTask} />
         <br />
         <div className="grid gap-5">
@@ -140,6 +163,7 @@ export default function Index() {
                     message={task.message}
                     category={task.category}
                     handleEdit={setEditTask}
+                    isCompleted={task.isCompleted}
                   />
                 );
               })}
