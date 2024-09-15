@@ -1,4 +1,6 @@
-import { User } from "@prisma/client";
+import { Category } from "@prisma/client";
+
+// type postedBy = Pick<User, "id" | "name">;
 
 export type RegisterForm = {
   email: string;
@@ -8,8 +10,8 @@ export type RegisterForm = {
 export interface TaskData {
   message: string;
   category: Category;
-  taskId: string;
-  postedBy?: User | null;
+  taskId?: string;
+  userId?: string;
 }
 
 export const categories = [
@@ -18,4 +20,4 @@ export const categories = [
   { name: "Home", value: "HOME" },
 ] as const;
 
-export type Category = (typeof categories)[number]["value"];
+// export type Category = (typeof categories)[number]["value"];

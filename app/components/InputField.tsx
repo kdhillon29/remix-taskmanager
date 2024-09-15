@@ -9,6 +9,7 @@ interface FormFieldProps {
   // onChange?: React.MouseEventHandler<HTMLButtonElement>;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   onBlur?: React.ChangeEventHandler<HTMLInputElement>;
+  onFocus?: React.ChangeEventHandler<HTMLInputElement>;
 }
 
 export function InputField({
@@ -18,6 +19,7 @@ export function InputField({
   value,
   onChange,
   onBlur,
+  onFocus,
 }: FormFieldProps) {
   return (
     <>
@@ -27,6 +29,7 @@ export function InputField({
       <input
         onChange={onChange ? onChange : () => console.log("no handler")}
         onBlur={onBlur ? onBlur : () => {}}
+        onFocus={onFocus ? onFocus : () => {}}
         type={type}
         id={htmlFor}
         name={htmlFor}

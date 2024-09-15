@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
-import { ActionFunction, LoaderFunction } from "@remix-run/node";
-import { useActionData, Link, useNavigation } from "@remix-run/react";
+import { ActionFunction, json, LoaderFunction } from "@remix-run/node";
+import { useActionData, Link, Form, useNavigation } from "@remix-run/react";
 
 import { authenticator } from "../utils/auth.server";
 
@@ -9,6 +10,7 @@ import { InputField } from "../components/InputField";
 import { loginSchema } from "../utils/validationschema";
 import { ZodIssue } from "zod";
 import { useDebounce } from "use-debounce";
+import { AuthorizationError } from "remix-auth";
 
 export const meta: MetaFunction = () => {
   return [{ title: "New Remix App login" }];
@@ -25,10 +27,22 @@ export const loader: LoaderFunction = async ({ request }) => {
 export const action: ActionFunction = async ({
   request,
 }: ActionFunctionArgs) => {
-  await authenticator.authenticate("user-pass", request, {
-    successRedirect: "/",
-    failureRedirect: "/login",
-  });
+  try {
+    await authenticator.authenticate("user-pass", request, {
+      successRedirect: "/",
+      // failureRedirect: "/login",
+      throwOnError: true,
+    });
+  } catch (error) {
+    if (error instanceof Response) return error;
+    if (error instanceof AuthorizationError) {
+      console.log(error);
+      return json({ error: "Invalid credentials" }, { status: 401 });
+
+      // here the error is related to the authentication process
+    }
+    // here the error is a generic error that another reason may throw
+  }
 };
 
 export default function Login() {
@@ -41,9 +55,15 @@ export default function Login() {
     email: actionData?.fields?.email || "",
     password: actionData?.fields?.password || "",
   });
-  const [error, setError] = useState<ZodIssue[]>();
+  const [error, setError] = useState<ZodIssue[] | string>("");
   const [isValid, setIsValid] = useState(false);
-  const [value] = useDebounce(formData, 3000);
+
+  useEffect(() => {
+    // setError(actionData?.error);
+    actionData?.error && setError(actionData?.error);
+  }, [actionData]);
+
+  const [value] = useDebounce(formData, 2000);
 
   const validate = (
     event?: React.ChangeEvent<HTMLInputElement>,
@@ -53,7 +73,12 @@ export default function Login() {
     field = !field ? "" : field;
 
     const userData = { ...value, [field]: event?.target.value };
-    const result = loginSchema.safeParse(userData);
+    const schema =
+      field === "email"
+        ? loginSchema.pick({ email: true })
+        : loginSchema.pick({ password: true });
+    // const result = loginSchema.safeParse(userData);
+    const result = schema.safeParse(userData);
     console.log(result);
 
     if (result.error) {
@@ -71,27 +96,29 @@ export default function Login() {
     field: string
   ) => {
     setFormData((form) => ({ ...form, [field]: event.target.value }));
-
+    validate(event, field);
     console.log(formData);
   };
 
   return (
     <div className="h-full  py-10 items-center flex flex-col gap-y-5">
-      <form method="POST" className="rounded-2xl bg-white p-6 w-96">
+      <Form method="POST" className="rounded-2xl bg-white p-6 w-96">
         <h2 className="text-3xl font-extrabold text-black-600 mb-5">Login</h2>
-        {error &&
-          error.length > 0 &&
-          error.map((er, i) => (
-            <p key={i} className="text-sm font-bold text-red-600">
-              *{er?.message}
+        {error?.length > 0 && typeof error !== "string" ? (
+          error?.map((er: ZodIssue, i: number) => (
+            <p key={i} className="text-sm text-red-600">
+              - {er.message}
             </p>
-          ))}
+          ))
+        ) : (
+          <p className="text-sm text-red-600">{error as string}</p>
+        )}
         <InputField
           htmlFor="email"
           label="Email"
           value={formData.email}
           onChange={(e) => handleInputChange(e, "email")}
-          onBlur={(e) => validate(e, "email")}
+          // onBlur={(e) => validate(e, "email")}
         />
 
         <InputField
@@ -100,7 +127,7 @@ export default function Login() {
           label="Password"
           value={formData.password}
           onChange={(e) => handleInputChange(e, "password")}
-          onBlur={(e) => validate(e, "password")}
+          // onBlur={(e) => validate(e, "password")}
         />
         <div className="w-full text-center mt-5">
           <button
@@ -117,7 +144,7 @@ export default function Login() {
             {navigation.state === "submitting" ? "Logging In.." : "Login"}
           </button>
         </div>
-      </form>
+      </Form>
       <p className="text-gray-600">
         Dont have an account?
         <Link to="/signup">

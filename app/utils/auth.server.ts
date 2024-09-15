@@ -3,6 +3,32 @@ import { sessionStorage } from "./session.server";
 import { FormStrategy } from "remix-auth-form";
 import { prisma, User } from "./prisma.server";
 import bcrypt from "bcryptjs";
+import { json } from "@remix-run/node";
+import { RegisterForm } from "./types";
+import { createUser } from "./user.server";
+
+export async function register(user: RegisterForm) {
+  const exists = await prisma.user.count({ where: { email: user.email } });
+  if (exists) {
+    console.log("user already exists");
+
+    return json(
+      { error: `User already exists with that email` },
+      { status: 400 }
+    );
+  }
+
+  const newUser = await createUser(user);
+  if (!newUser) {
+    return json(
+      {
+        error: `Something went wrong trying to create a new user.`,
+        fields: { email: user.email, password: user.password },
+      },
+      { status: 400 }
+    );
+  } else return newUser.id;
+}
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {

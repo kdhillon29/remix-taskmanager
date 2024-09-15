@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import {
   ActionFunction,
@@ -6,14 +6,14 @@ import {
   LoaderFunction,
   redirect,
 } from "@remix-run/node";
-import { useActionData, Link } from "@remix-run/react";
+import { useActionData, Link, Form } from "@remix-run/react";
 
-import { authenticator } from "../utils/auth.server";
-import { createUser } from "../utils/user.server";
+import { register, authenticator } from "../utils/auth.server";
 import { InputField } from "../components/InputField";
 import { registerSchema } from "../utils/validationschema";
-import { AuthorizationError } from "remix-auth";
+// import { AuthorizationError } from "remix-auth";
 import { ZodIssue } from "zod";
+import { AuthorizationError } from "remix-auth";
 
 export const meta: MetaFunction = () => {
   return [
@@ -45,34 +45,8 @@ export const action: ActionFunction = async ({
     email,
     password,
   });
-  console.log(result.error?.issues);
-  if (result.success) {
-    try {
-      const newUser = await createUser({ email, password, name });
-      console.log(`user created ${newUser.email}`);
-      //return redirect("/login");
-      return await authenticator.authenticate("user-pass", request, {
-        successRedirect: "/",
-        failureRedirect: "/login",
-        throwOnError: true,
-        context: { formData: form },
-      });
-      // return json({ message: "User created successfully!" }, { status: 201 });
-    } catch (error) {
-      console.log(error);
-      if (error instanceof Response) return error;
-      if (error instanceof AuthorizationError) {
-        // here the error is related to the authentication process
-        return json(
-          {
-            error: " Invalid  credentials or internal server error occurred!",
-            form: action,
-          },
-          { status: 500 }
-        );
-      }
-    }
-  } else if (result.error) {
+  console.log("errors are" + result.error?.issues);
+  if (!result.success) {
     return json(
       {
         error: result.error?.issues,
@@ -81,11 +55,32 @@ export const action: ActionFunction = async ({
       { status: 400 }
     );
   }
-  return redirect("/login");
+
   // return await authenticator.authenticate("user-pass", request, {
   //   successRedirect: "/",
   //   failureRedirect: "/login",
   // });
+  try {
+    const resp = await register({ email, password, name });
+    console.log(resp);
+    if (typeof resp !== "string") {
+      return resp;
+    }
+    console.log("in try block");
+    return await authenticator.authenticate("user-pass", request, {
+      successRedirect: "/",
+      // failureRedirect: "/login",
+      throwOnError: true,
+    });
+  } catch (error) {
+    if (error instanceof Response) return error;
+    if (error instanceof AuthorizationError) {
+      console.log(error);
+      return json({ error: "Invalid credentials" }, { status: 401 });
+    }
+  }
+
+  return redirect("/login");
 };
 
 export default function Signup() {
@@ -95,9 +90,14 @@ export default function Signup() {
     email: actionData?.fields?.email || "",
     password: actionData?.fields?.password || "",
     name: actionData?.fields?.name || "",
-    error: actionData?.error || "",
+    // error: actionData?.fields?.error || "no error",
   });
   console.log(formData);
+  const [error, setError] = useState<ZodIssue[] | string>("");
+
+  useEffect(() => {
+    setError(actionData?.error);
+  }, [actionData]);
 
   // Updates the form data when an input changes
   const handleInputChange = (
@@ -109,16 +109,16 @@ export default function Signup() {
 
   return (
     <div className="h-full justify-center items-center flex flex-col gap-y-5">
-      <form method="POST" className="rounded-2xl bg-white p-6 w-96">
+      <Form method="POST" className="rounded-2xl bg-white p-6 w-96">
         <h2 className="text-3xl font-extrabold text-black-600 mb-5">
-          {formData.error.length > 0 && typeof formData.error !== "string" ? (
-            formData.error?.map((er: ZodIssue, i: number) => (
+          {error?.length > 0 && typeof error !== "string" ? (
+            error?.map((er: ZodIssue, i: number) => (
               <p key={i} className="text-sm text-red-600">
                 - {er.message}
               </p>
             ))
           ) : (
-            <p className="text-sm text-red-600">{formData.error}</p>
+            <p className="text-sm text-red-600">{error as string}</p>
           )}
           Create an account
         </h2>
@@ -126,6 +126,7 @@ export default function Signup() {
           htmlFor="name"
           type="name"
           label="Name"
+          onFocus={() => setError("")}
           value={formData.name}
           onChange={(e) => handleInputChange(e, "name")}
         />
@@ -146,13 +147,13 @@ export default function Signup() {
           <button
             type="submit"
             name="_action"
-            value="Sign In"
+            value="SignUp"
             className="w-full rounded-xl mt-2 bg-red-500 px-3 py-2 text-white font-semibold transition duration-300 ease-in-out hover:bg-red-600"
           >
             Create an account
           </button>
         </div>
-      </form>
+      </Form>
       <p className="text-gray-600">
         Already have an account?
         <Link to="/login">
