@@ -9,7 +9,7 @@ import { authenticator } from "../utils/auth.server";
 import { InputField } from "../components/InputField";
 import { loginSchema } from "../utils/validationschema";
 import { ZodIssue } from "zod";
-import { useDebounce } from "use-debounce";
+// import { useDebounce } from "use-debounce";
 import { AuthorizationError } from "remix-auth";
 
 export const meta: MetaFunction = () => {
@@ -58,27 +58,18 @@ export default function Login() {
   const [error, setError] = useState<ZodIssue[] | string>("");
   const [isValid, setIsValid] = useState(false);
 
+  console.log(error);
   useEffect(() => {
-    // setError(actionData?.error);
     actionData?.error && setError(actionData?.error);
   }, [actionData]);
 
-  const [value] = useDebounce(formData, 2000);
+  // const [value] = useDebounce(formData, 2000);
 
-  const validate = (
-    event?: React.ChangeEvent<HTMLInputElement>,
-    field?: string
-  ) => {
+  const validate = () => {
     setError([]);
-    field = !field ? "" : field;
 
-    const userData = { ...value, [field]: event?.target.value };
-    const schema =
-      field === "email"
-        ? loginSchema.pick({ email: true })
-        : loginSchema.pick({ password: true });
-    // const result = loginSchema.safeParse(userData);
-    const result = schema.safeParse(userData);
+    const result = loginSchema.safeParse(formData);
+
     console.log(result);
 
     if (result.error) {
@@ -95,8 +86,11 @@ export default function Login() {
     event: React.ChangeEvent<HTMLInputElement>,
     field: string
   ) => {
+    setError("");
     setFormData((form) => ({ ...form, [field]: event.target.value }));
-    validate(event, field);
+    setTimeout(() => {
+      validate();
+    }, 2000);
     console.log(formData);
   };
 
